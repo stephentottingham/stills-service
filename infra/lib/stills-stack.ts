@@ -60,6 +60,9 @@ export class StillsStack extends Stack {
       versioned: true,
       removalPolicy: RemovalPolicy.RETAIN,
       lifecycleRules: [
+        // Intelligent-Tiering: files untouched for 30 days cost about half, after 90 days about a fifth.
+        // Reads stay instant and free; only a small monitoring fee per file over 128 KB.
+        { transitions: [{ storageClass: s3.StorageClass.INTELLIGENT_TIERING, transitionAfter: Duration.days(0) }] },
         { noncurrentVersionExpiration: Duration.days(30) },
         { abortIncompleteMultipartUploadAfter: Duration.days(2) },
       ],
@@ -72,6 +75,8 @@ export class StillsStack extends Stack {
       enforceSSL: true,
       removalPolicy: RemovalPolicy.RETAIN,
       lifecycleRules: [
+        // Old versions' renditions are rarely opened again, so let them drop to cheaper tiers.
+        { prefix: 'r/', transitions: [{ storageClass: s3.StorageClass.INTELLIGENT_TIERING, transitionAfter: Duration.days(0) }] },
         { prefix: 'z/', expiration: Duration.days(7) },
         { abortIncompleteMultipartUploadAfter: Duration.days(1) },
       ],
