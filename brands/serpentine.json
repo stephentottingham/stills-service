@@ -1,0 +1,10 @@
+{
+  "id": "serpentine",
+  "name": "Serpentine Creative",
+  "logo": "",
+  "colours": { "background": "#f7f5f0", "surface": "#ffffff", "text": "#1d1d1b", "muted": "#6f6b63", "accent": "#2f6b4f" },
+  "fonts": { "heading": "'Inter', system-ui, sans-serif", "body": "'Inter', system-ui, sans-serif" },
+  "fontsCss": "https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap",
+  "domain": "",
+  "website": ""
+}

@@ -1,0 +1,10 @@
+{
+  "name": "@stills/recipe",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The adjustment maths. One implementation, used by the editor preview and the server render, so the preview matches the result.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": { "test": "vitest run" }
+}

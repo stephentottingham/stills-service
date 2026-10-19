@@ -1,0 +1,10 @@
+{
+  "id": "bigsmall",
+  "name": "Big Small TV",
+  "logo": "",
+  "colours": { "background": "#111111", "surface": "#1c1c1c", "text": "#f5f3ee", "muted": "#a39f97", "accent": "#ffd400" },
+  "fonts": { "heading": "'Inter', system-ui, sans-serif", "body": "'Inter', system-ui, sans-serif" },
+  "fontsCss": "https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap",
+  "domain": "gallery.bigsmall.tv",
+  "website": "https://bigsmall.tv"
+}

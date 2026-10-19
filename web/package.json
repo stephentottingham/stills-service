@@ -1,0 +1,12 @@
+{
+  "name": "@stills/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The library and editor screens (static, served from CloudFront under /app/).",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node build.mjs --watch"
+  },
+  "dependencies": { "@stills/recipe": "*" }
+}

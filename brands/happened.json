@@ -1,0 +1,10 @@
+{
+  "id": "happened",
+  "name": "Happened",
+  "logo": "",
+  "colours": { "background": "#ffffff", "surface": "#f4f4f4", "text": "#111111", "muted": "#666666", "accent": "#111111" },
+  "fonts": { "heading": "system-ui, sans-serif", "body": "system-ui, sans-serif" },
+  "fontsCss": "",
+  "domain": "",
+  "website": ""
+}

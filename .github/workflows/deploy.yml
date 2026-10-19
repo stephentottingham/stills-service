@@ -1,0 +1,35 @@
+name: Deploy
+# Run by hand. Commit first; this deploys main.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-west-2
+      - run: npx cdk deploy StillsService --require-approval never
+        working-directory: infra
+        env:
+          STILLS_ACCOUNT: ${{ vars.STILLS_ACCOUNT }}
+          STILLS_USER_POOL_ID: ${{ vars.STILLS_USER_POOL_ID }}
+          STILLS_USER_POOL_CLIENT_IDS: ${{ vars.STILLS_USER_POOL_CLIENT_IDS }}
+          STILLS_COGNITO_DOMAIN: ${{ vars.STILLS_COGNITO_DOMAIN }}
+          STILLS_WEB_CLIENT_ID: ${{ vars.STILLS_WEB_CLIENT_ID }}
+          STILLS_DOMAINS: ${{ vars.STILLS_DOMAINS }}
+          STILLS_CERTIFICATE_ARN: ${{ vars.STILLS_CERTIFICATE_ARN }}
+          STILLS_MAIL_FROM: ${{ vars.STILLS_MAIL_FROM }}
+          STILLS_ALARM_EMAIL: ${{ vars.STILLS_ALARM_EMAIL }}
