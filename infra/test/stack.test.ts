@@ -56,9 +56,9 @@ describe('the stack', () => {
     );
     expect(policies).toHaveLength(1);
     const statements = (policies[0] as any).Properties.PolicyDocument.Statement;
-    const actions = statements.flatMap((s: any) => [].concat(s.Action));
+    const actions = statements.flatMap((s: any) => ([] as string[]).concat(s.Action));
     expect(actions.sort()).toEqual(['s3:DeleteObject', 's3:GetBucketLocation', 's3:GetObject', 's3:ListBucket']);
-    const objectStatement = statements.find((s: any) => [].concat(s.Action).includes('s3:GetObject'));
+    const objectStatement = statements.find((s: any) => ([] as string[]).concat(s.Action).includes('s3:GetObject'));
     expect(JSON.stringify(objectStatement.Resource)).toContain('/raw/*');
     t.resourceCountIs('AWS::IAM::AccessKey', 0); // keys are made by hand, never in the template
   });
