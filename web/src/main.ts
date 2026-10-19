@@ -1,6 +1,7 @@
 import { api, loadConfig, completeSignIn, isSignedIn, signIn, signInReady, signOut, ApiError } from './api';
 import { $, $$, esc, toast, main, companyOptions, companyName, formData, date, dateTime } from './ui';
-import { uploadFiles, filesFromDrop } from './upload';
+import { filesFromDrop } from './upload';
+import { planAndUpload } from './planner';
 import { openEditor } from './editor';
 
 let current = 0; // guards against a slow screen drawing over a newer one
@@ -78,7 +79,7 @@ async function albumScreen(id: string, token: number) {
     <p><a href="#/">← Albums</a></p>
     <h1>${esc(album.name)}</h1>
     <p class="muted">${esc(companyName(album.company))}${album.client ? ' · ' + esc(album.client) : ''}${album.jobId ? ' · job ' + esc(album.jobId) : ''} · ${album.count} stills${album.retentionDays ? ` · kept ${album.retentionDays} days` : ''}</p>
-    <div class="drop" id="drop">Drop pictures or folders here, or <label style="display:inline;color:var(--accent);cursor:pointer">choose files<input type="file" id="pick" multiple accept="image/jpeg,image/png,image/heic,image/heif,image/tiff,.heic,.heif,.tif,.tiff" hidden></label>
+    <div class="drop" id="drop">Drop pictures, RAWs or whole card folders here, or <label style="display:inline;color:var(--accent);cursor:pointer">choose files<input type="file" id="pick" multiple accept="image/jpeg,image/png,image/heic,image/heif,image/tiff,.heic,.heif,.tif,.tiff,.cr2,.cr3,.nef,.arw,.raf,.orf,.rw2,.dng,.pef,.srw,.iiq,.3fr" hidden></label>
       <div class="progress" hidden><div></div></div><div id="upmsg" class="muted"></div></div>
     <div class="toolbar">
       <button id="gallery" class="primary">Make a client gallery</button>
@@ -89,7 +90,8 @@ async function albumScreen(id: string, token: number) {
     <div class="grid" id="grid"></div>
     <h2>Client galleries</h2>
     <div id="galleries"></div>
-    <dialog id="gdialog"></dialog>`);
+    <dialog id="gdialog"></dialog>
+    <dialog id="updialog"></dialog>`);
 
   const drawGrid = (list: any[]) => {
     $('#grid', m).innerHTML =
@@ -97,7 +99,7 @@ async function albumScreen(id: string, token: number) {
         .map((s) => {
           const img = s.renditions ? `<img src="${esc(s.renditions.t)}" alt="${esc(s.title ?? s.filename)}" loading="lazy">` : '';
           const status = s.status !== 'ready' ? `<span class="status">${esc(s.status === 'duplicate' ? 'duplicate (kept the first copy)' : s.status)}</span>` : '';
-          const flags = [s.ai ? 'AI' : '', s.version ? `v${s.version}` : ''].filter(Boolean).join(' · ');
+          const flags = [s.ai ? 'AI' : '', s.raw ? 'RAW' : '', s.source === 'raw-preview' ? 'from RAW' : '', s.version ? `v${s.version}` : ''].filter(Boolean).join(' · ');
           return `<div class="tile${selected.has(s.id) ? ' selected' : ''}" data-id="${esc(s.id)}">
             ${img}${status}${flags ? `<span class="flag">${esc(flags)}</span>` : ''}
             ${s.status === 'ready' ? `<input type="checkbox" aria-label="Select" ${selected.has(s.id) ? 'checked' : ''}>` : ''}</div>`;
@@ -143,15 +145,8 @@ async function albumScreen(id: string, token: number) {
   // Uploads
   const drop = $('#drop', m);
   const bar = $('.progress', m);
-  const start = async (files: File[]) => {
-    if (!files.length) return toast('No pictures found there (JPEG, PNG, HEIC or TIFF).');
-    bar.hidden = false;
-    await uploadFiles(id, files, (done, total, failed) => {
-      ($('div', bar) as HTMLElement).style.width = `${(100 * done) / total}%`;
-      $('#upmsg', m).textContent = `${done} of ${total} uploaded${failed ? `, ${failed} failed` : ''}`;
-    });
-    setTimeout(refresh, 1500);
-  };
+  const start = (files: File[]) =>
+    planAndUpload(id, files, m, () => setTimeout(refresh, 1500)).catch((e) => toast((e as Error).message));
   drop.ondragover = (e) => {
     e.preventDefault();
     drop.classList.add('over');
@@ -308,8 +303,8 @@ async function start() {
   if (!(await isSignedIn())) {
     main(
       signInReady()
-        ? '<div class="card"><h1>Stills</h1><p>Sign in with your work account.</p><button class="primary" id="signin">Sign in</button></div>'
-        : '<div class="card"><h1>Stills</h1><p>Sign-in is not set up yet. See docs/SETUP.md (Cognito app client and hosted sign-in domain).</p></div>',
+        ? '<div class="card"><h1>Stills Engine</h1><p>Sign in with your work account.</p><button class="primary" id="signin">Sign in</button></div>'
+        : '<div class="card"><h1>Stills Engine</h1><p>Sign-in is not set up yet. See docs/SETUP.md (Cognito app client and hosted sign-in domain).</p></div>',
     );
     $('#signin')?.addEventListener('click', () => signIn());
     return;

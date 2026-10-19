@@ -18,8 +18,8 @@ export class DeployAccessStack extends Stack {
     });
 
     const role = new iam.Role(this, 'DeployRole', {
-      roleName: 'stills-service-deploy',
-      description: 'GitHub Actions deploys of the stills service',
+      roleName: 'stills-engine-deploy',
+      description: 'GitHub Actions deploys of the Stills Engine',
       maxSessionDuration: Duration.hours(1),
       assumedBy: new iam.OpenIdConnectPrincipal(provider, {
         StringEquals: { 'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com' },

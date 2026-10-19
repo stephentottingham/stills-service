@@ -1,4 +1,4 @@
-# Stills service: notes for Claude
+# Stills Engine: notes for Claude
 
 Read README.md and docs/ARCHITECTURE.md first. The brief this was built from lives in the Production Engine repo: docs/STILLS-SERVICE-BRIEF.md.
 

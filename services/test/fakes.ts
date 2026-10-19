@@ -46,6 +46,7 @@ export function setEnv() {
     TABLE_NAME: 'table',
     ORIGINALS_BUCKET: 'originals',
     RENDITIONS_BUCKET: 'renditions',
+    RAW_BUCKET: 'raw',
     PUBLIC_BASE: 'https://stills.example',
     DISTRIBUTION_ID: 'E123',
     SIGNING_KEY_PAIR_ID: 'K123',

@@ -108,6 +108,10 @@ export interface Still {
   people?: People;
   /** AI-made. Always labelled, never chosen automatically. */
   ai?: boolean;
+  /** Where this still came from, when not a normal export. */
+  source?: 'raw-preview';
+  /** Its RAW, kept on the Synology (path inside the RAW folder there). */
+  raw?: { filename: string; path: string; bytes?: number };
 
   recipe: Recipe;
   version: number;
@@ -117,6 +121,22 @@ export interface Still {
   uploadedBy: string;
   uploadedAt: string;
   updatedAt?: string;
+}
+
+/** A RAW file passing through the inbox on its way to the Synology. */
+export interface RawFile {
+  albumId: string;
+  filename: string;
+  /** Path inside the Synology's RAW folder. */
+  path: string;
+  /** Key in the RAW inbox bucket. */
+  key: string;
+  bytes: number;
+  status: 'requested' | 'arrived';
+  stillId?: string;
+  requestedAt: string;
+  arrivedAt?: string;
+  uploadedBy: string;
 }
 
 export interface Version {

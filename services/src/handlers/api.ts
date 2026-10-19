@@ -31,6 +31,7 @@ import { createAlbum, getAlbum, listAlbums, albumFields, saveAlbum } from '../li
 import { createGallery, getGallery, galleryView, activity, galleryStills, galleryItem } from '../lib/galleries';
 import { requestZip, getZip, zipStillsFor } from '../lib/zips';
 import { sourceOf } from '../lib/renditions';
+import { isRaw, requestRawUpload, listRaws, rawFolder } from '../lib/raw';
 import { signPath } from '../lib/signing';
 import { emit } from '../lib/events';
 
@@ -72,20 +73,28 @@ const router = new Router()
     const now = new Date().toISOString();
     const uploads = [];
     for (const f of files) {
+      const name = String(f.name ?? 'untitled').slice(0, 255);
+      if (!(f.size > 0 && f.size <= MAX_UPLOAD_BYTES)) throw badRequest(`${name}: too big (500 MB limit)`);
+      // RAWs go to the inbox for the Synology, not into the library.
+      if (isRaw(name)) {
+        uploads.push(await requestRawUpload(album, name, f.size, p.id));
+        continue;
+      }
       const type = String(f.type ?? '').toLowerCase();
       const ext = ACCEPTED_TYPES[type];
-      if (!ext) throw badRequest(`${f.name}: JPEG, PNG, HEIC and TIFF only for now`);
-      if (!(f.size > 0 && f.size <= MAX_UPLOAD_BYTES)) throw badRequest(`${f.name}: too big (500 MB limit)`);
+      if (!ext) throw badRequest(`${name}: JPEG, PNG, HEIC, TIFF or camera RAW only`);
       const still: Still = {
         id: newId('st'),
         status: 'pending',
-        filename: String(f.name ?? 'untitled').slice(0, 255),
+        filename: name,
         contentType: type,
         originalKey: '',
         companies: [album.company],
         client: album.client,
         jobId: album.jobId,
         albumIds: [album.id],
+        // A JPEG the uploader took from a RAW's built-in preview.
+        source: f.fromRaw === true ? 'raw-preview' : undefined,
         recipe: { v: 1 },
         version: 0,
         uploadedBy: p.id,
@@ -97,11 +106,37 @@ const router = new Router()
       const url = await getSignedUrl(
         s3,
         new PutObjectCommand({ Bucket: config.originalsBucket, Key: still.originalKey, ContentType: type, ContentLength: f.size }),
-        { expiresIn: 3600 },
+        { expiresIn: 6 * 3600 },
       );
-      uploads.push({ stillId: still.id, name: still.filename, url, method: 'PUT', headers: { 'content-type': type } });
+      uploads.push({ kind: 'still', stillId: still.id, name: still.filename, url, method: 'PUT', headers: { 'content-type': type } });
     }
     return { uploads };
+  })
+  // What is already in the album, so the uploader can skip files sent before.
+  .on('GET', '/api/albums/{id}/files', async (c) => {
+    const album = await getAlbum(id(c), who(c));
+    const stills = await getStills(await albumStillIds(album.id));
+    const raws = await listRaws(album.id);
+    return {
+      stills: stills.filter((s) => s.status !== 'failed').map((s) => ({ filename: s.filename, bytes: s.bytes, status: s.status, source: s.source })),
+      raws: raws.map((r) => ({ filename: r.filename, bytes: r.bytes, status: r.status, path: r.path, stillId: r.stillId })),
+      rawFolder: rawFolder(album),
+    };
+  })
+  // Connection test: two upload links for throwaway bytes, deleted within a day.
+  .on('POST', '/api/speedtest', async (c) => {
+    who(c);
+    const bytes = Math.min(Math.max(Number(c.body.bytes) || 2_000_000, 100_000), 16_000_000);
+    const urls = await Promise.all(
+      [0, 1].map(() =>
+        getSignedUrl(
+          s3,
+          new PutObjectCommand({ Bucket: config.rawBucket, Key: `speedtest/${newId('sp')}`, ContentType: 'application/octet-stream', ContentLength: bytes }),
+          { expiresIn: 600 },
+        ),
+      ),
+    );
+    return { bytes, urls, headers: { 'content-type': 'application/octet-stream' } };
   })
   .on('POST', '/api/albums/{id}/import', async () => json(501, { error: 'Imports from Drive, OneDrive and Frame.io come in phase 2' }))
   .on('POST', '/api/albums/{id}/stills', async (c) => {

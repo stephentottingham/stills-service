@@ -5,7 +5,7 @@ Phase 1 is built and tested, but **not yet deployed**. The values marked _after 
 ## 1. Base URL and key
 
 - API base: `https://<PublicBase>/api` (_after deploy_: the `ApiBase` output).
-- Engine key: made by `npx tsx scripts/create-app.mts --app engine --webhook <engine hook URL>`. It is stored in the stills account at Secrets Manager `stills-service/apps/engine`. Copy it into `proposal-engine/app` as **`stillsServiceKey`**. Never paste it in chat.
+- Engine key: made by `npx tsx scripts/create-app.mts --app engine --webhook <engine hook URL>`. It is stored in the stills account at Secrets Manager `stills-engine/apps/engine`. Copy it into `proposal-engine/app` as **`stillsServiceKey`**. Never paste it in chat.
 - Send it as `Authorization: Bearer <stillsServiceKey>`.
 
 ## 2. The API
@@ -33,7 +33,7 @@ None. The engine calls the API over HTTPS with its key. Its runtime role `propos
 
 ## 6. Webhook address the engine should expose
 
-`POST /api/stills-service/hook`. Verify `x-stills-signature: t=<ts>,v1=<hex>` as the HMAC-SHA256 of `"<ts>.<raw body>"`, using the secret in the stills account at `stills-service/webhook/engine` (copy it into `proposal-engine/app` as `stillsServiceWebhookSecret`). Reject anything older than 5 minutes, and answer 2xx quickly. Events: `still.ready`, `still.version`, `gallery.viewed`, `zip.ready` (`gallery.selects` in phase 2).
+`POST /api/stills-engine/hook`. Verify `x-stills-signature: t=<ts>,v1=<hex>` as the HMAC-SHA256 of `"<ts>.<raw body>"`, using the secret in the stills account at `stills-engine/webhook/engine` (copy it into `proposal-engine/app` as `stillsServiceWebhookSecret`). Reject anything older than 5 minutes, and answer 2xx quickly. Events: `still.ready`, `still.version`, `gallery.viewed`, `zip.ready` (`gallery.selects` in phase 2).
 
 ## 7. Still to decide (with Steve)
 

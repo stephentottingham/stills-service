@@ -31,6 +31,7 @@ export async function openEditor(id: string) {
         </div>
         <p class="muted">${esc(still.filename)} · ${still.w}×${still.h}${still.exif?.camera ? ' · ' + esc(still.exif.camera) : ''}${still.exif?.takenAt ? ' · ' + dateTime(still.exif.takenAt) : ''}
           ${still.ai ? '<span class="chip ai">AI-made</span>' : ''}
+          ${still.raw ? `<span class="chip" title="On the office server, in the RAW folder">RAW: ${esc(still.raw.path)}</span>` : ''}${still.source === 'raw-preview' ? '<span class="chip">JPEG from the RAW preview</span>' : ''}
           · <a id="dlm" download>Web size</a> · <a id="dlfull" download>Full size</a></p>
       </div>
       <div class="panel card" id="panel"></div>

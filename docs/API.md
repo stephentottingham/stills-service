@@ -17,14 +17,18 @@ Errors are `{ "error": "Plain message", "code": "bad_request" }`, with status co
 | `GET /albums?company=&client=&jobId=` | `{albums: [...]}`, newest first |
 | `GET /albums/{id}` | album + `count` |
 | `PATCH /albums/{id}` | any of the create fields |
-| `POST /albums/{id}/uploads` | `{files: [{name, type, size}]}` (up to 500) → `{uploads: [{stillId, name, url, method: "PUT", headers}]}` |
+| `POST /albums/{id}/uploads` | `{files: [{name, type, size, fromRaw?}]}` (up to 500) → `{uploads: [{kind: "still", stillId, name, url, method: "PUT", headers} \| {kind: "raw", name, path, url, method, headers}]}` |
+| `GET /albums/{id}/files` | what is already there: `{stills: [{filename, bytes, status, source}], raws: [{filename, bytes, status, path, stillId}], rawFolder}` |
+| `POST /speedtest` | `{bytes}` → two throwaway upload links, for timing the connection |
 | `POST /albums/{id}/stills` | `{ids}`: add existing stills (for "best of" albums) |
 | `DELETE /albums/{id}/stills/{stillId}` | take a still out of the album (the still stays) |
 | `POST /albums/{id}/import` | 501 until phase 2 |
 
 `company` is one of `bigsmall`, `atspeed`, `serpentine`, `happened`.
 
-**Uploading.** Ask for links, then `PUT` each file to its `url` with the given `content-type`. Links last an hour. Each file is processed when it arrives: `status` goes from `pending` to `ready` (or `failed`, or `duplicate` with `duplicateOf` when an identical file is already in the bank; the first copy is then added to this album). You get a `still.ready` webhook. Accepted: `image/jpeg`, `image/png`, `image/heic`, `image/heif`, `image/tiff`, up to 500 MB each.
+**Uploading.** Ask for links, then `PUT` each file to its `url` with the given `content-type`. Links last an hour. Each file is processed when it arrives: `status` goes from `pending` to `ready` (or `failed`, or `duplicate` with `duplicateOf` when an identical file is already in the bank; the first copy is then added to this album). You get a `still.ready` webhook. Accepted: `image/jpeg`, `image/png`, `image/heic`, `image/heif`, `image/tiff`, up to 500 MB each. Links last 6 hours.
+
+**RAWs** (CR2, CR3, NEF, ARW, RAF, ORF, RW2, DNG and others, by extension) are not stills. They go to the RAW inbox and on to the office Synology, and are paired with the JPEG of the same name, which then carries `raw: {filename, path, bytes}`. `fromRaw: true` marks a JPEG made from a RAW's built-in preview (`source: "raw-preview"`). See [RAW.md](RAW.md).
 
 ## Stills
 
@@ -122,7 +126,7 @@ x-stills-delivery: <id>
 x-stills-signature: t=<unix seconds>,v1=<hex HMAC-SHA256 of "<t>.<raw body>">
 ```
 
-Body: `{id, event, at, data}`. To check one, recompute the HMAC with the app's webhook secret (`stills-service/webhook/<app>`), compare in constant time, and reject anything older than 5 minutes. Answer 2xx. Anything else is retried with back-off (up to 8 tries), then parked in a dead-letter queue.
+Body: `{id, event, at, data}`. To check one, recompute the HMAC with the app's webhook secret (`stills-engine/webhook/<app>`), compare in constant time, and reject anything older than 5 minutes. Answer 2xx. Anything else is retried with back-off (up to 8 tries), then parked in a dead-letter queue.
 
 | Event | `data` |
 |---|---|

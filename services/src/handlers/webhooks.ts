@@ -18,7 +18,7 @@ export async function handler(event: SQSEvent): Promise<SQSBatchResponse> {
         const t = Math.floor(Date.now() / 1000);
         const headers: Record<string, string> = {
           'content-type': 'application/json',
-          'user-agent': 'stills-service-webhooks/1',
+          'user-agent': 'stills-engine-webhooks/1',
           'x-stills-event': m.event,
           'x-stills-delivery': m.id,
         };

@@ -345,6 +345,8 @@ export async function deleteStill(id: string, opts: { invalidate?: boolean } = {
   await deleteAllObjectVersions(config.originalsBucket, `o/${id}/`);
   await deleteAllObjectVersions(config.originalsBucket, `m/${id}/`);
   await deletePrefix(config.renditionsBucket, `r/${id}/`);
+  // Its RAW, if still in the inbox. The Synology's copy is deleted there (see docs/RAW.md).
+  if (s?.raw?.path) await deleteAllObjectVersions(config.rawBucket, `raw/${s.raw.path}`);
   if (opts.invalidate !== false) await invalidate([`/r/${id}/*`]);
 }
 

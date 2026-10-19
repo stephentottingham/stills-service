@@ -82,6 +82,20 @@ export class StillsStack extends Stack {
       ],
     });
 
+    // RAW inbox: raw/ waits here until the Synology's Cloud Sync pulls it down
+    // (cleared after 30 days); speedtest/ holds throwaway connection tests.
+    const rawInbox = new s3.Bucket(this, 'RawInbox', {
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
+      removalPolicy: RemovalPolicy.RETAIN,
+      lifecycleRules: [
+        { prefix: 'raw/', expiration: Duration.days(30) },
+        { prefix: 'speedtest/', expiration: Duration.days(1) },
+        { abortIncompleteMultipartUploadAfter: Duration.days(2) },
+      ],
+    });
+
     // The library screens and brand assets.
     const web = new s3.Bucket(this, 'Web', {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
@@ -108,11 +122,11 @@ export class StillsStack extends Stack {
     // ---------- Secrets ----------
     // CloudFront signing key: made by the keygen resource below, straight into Secrets Manager.
     const signingKey = new secrets.Secret(this, 'SigningKey', {
-      description: 'Private key for CloudFront signed URLs (stills service). Made at deploy; never in code.',
+      description: 'Private key for CloudFront signed URLs (Stills Engine). Made at deploy; never in code.',
     });
     // HMAC key for gallery unlock cookies.
     const cookieKey = new secrets.Secret(this, 'CookieKey', {
-      description: 'HMAC key for gallery password cookies (stills service).',
+      description: 'HMAC key for gallery password cookies (Stills Engine).',
       generateSecretString: { passwordLength: 64, excludePunctuation: true },
     });
 
@@ -148,6 +162,7 @@ export class StillsStack extends Stack {
           TABLE_NAME: table.tableName,
           ORIGINALS_BUCKET: originals.bucketName,
           RENDITIONS_BUCKET: renditions.bucketName,
+          RAW_BUCKET: rawInbox.bucketName,
           ...rest.environment,
         },
         ...rest,
@@ -182,12 +197,12 @@ export class StillsStack extends Stack {
     });
     const publicKey = new cf.PublicKey(this, 'SigningPublicKey', {
       encodedKey: keyResource.getAttString('PublicKey'),
-      comment: 'Stills service signed URLs',
+      comment: 'Stills Engine signed URLs',
     });
     const keyGroup = new cf.KeyGroup(this, 'SigningKeyGroup', { items: [publicKey] });
 
     const httpApi = new apigw.HttpApi(this, 'Api', {
-      description: 'Stills service API (/api) and client galleries (/g)',
+      description: 'Stills Engine API (/api) and client galleries (/g)',
       createDefaultStage: true,
     });
     const apiDomain = `${httpApi.apiId}.execute-api.${this.region}.amazonaws.com`;
@@ -211,7 +226,7 @@ export class StillsStack extends Stack {
       : undefined;
 
     const distribution = new cf.Distribution(this, 'Distribution', {
-      comment: 'Stills service',
+      comment: 'Stills Engine',
       priceClass: cf.PriceClass.PRICE_CLASS_100,
       httpVersion: cf.HttpVersion.HTTP2_AND_3,
       domainNames: settings.domainNames.length ? settings.domainNames : undefined,
@@ -304,7 +319,7 @@ export class StillsStack extends Stack {
     webhooks.addToRolePolicy(
       new iam.PolicyStatement({
         actions: ['secretsmanager:GetSecretValue'],
-        resources: [`arn:aws:secretsmanager:${this.region}:${this.account}:secret:stills-service/webhook/*`],
+        resources: [`arn:aws:secretsmanager:${this.region}:${this.account}:secret:stills-engine/webhook/*`],
       }),
     );
 
@@ -319,6 +334,32 @@ export class StillsStack extends Stack {
       maxAge: 3600,
     });
     originals.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.SqsDestination(uploads.q), { prefix: 'o/' });
+    rawInbox.addCorsRule({
+      allowedMethods: [s3.HttpMethods.PUT],
+      allowedOrigins: settings.domainNames.length ? [...settings.domainNames.map((d) => `https://${d}`), ...settings.devOrigins] : ['*'],
+      allowedHeaders: ['content-type', 'content-length'],
+      maxAge: 3600,
+    });
+    rawInbox.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.SqsDestination(uploads.q), { prefix: 'raw/' });
+    rawInbox.grantPut(api);
+    for (const f of [api, retention]) {
+      rawInbox.grantDelete(f);
+      f.addToRolePolicy(new iam.PolicyStatement({ actions: ['s3:ListBucketVersions', 's3:ListBucket'], resources: [rawInbox.bucketArn] }));
+    }
+
+    // The Synology's own user: it can read, list and tidy raw/ and nothing else.
+    // Make its access key in the console and type it straight into Cloud Sync (docs/RAW.md).
+    const synology = new iam.User(this, 'SynologyUser', { userName: 'stills-engine-synology' });
+    synology.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ['s3:ListBucket', 's3:GetBucketLocation'],
+        resources: [rawInbox.bucketArn],
+        conditions: { StringLike: { 's3:prefix': ['raw/*', 'raw/', ''] } },
+      }),
+    );
+    synology.addToPolicy(
+      new iam.PolicyStatement({ actions: ['s3:GetObject', 's3:DeleteObject'], resources: [rawInbox.arnForObjects('raw/*')] }),
+    );
 
     processor.addEventSource(new eventsources.SqsEventSource(uploads.q, { batchSize: 1, reportBatchItemFailures: true, maxConcurrency: 50 }));
     worker.addEventSource(new eventsources.SqsEventSource(work.q, { batchSize: 1, reportBatchItemFailures: true, maxConcurrency: 20 }));
@@ -386,6 +427,7 @@ export class StillsStack extends Stack {
     new CfnOutput(this, 'TableName', { value: table.tableName });
     new CfnOutput(this, 'OriginalsBucket', { value: originals.bucketName });
     new CfnOutput(this, 'RenditionsBucket', { value: renditions.bucketName });
+    new CfnOutput(this, 'RawInboxBucket', { value: rawInbox.bucketName, description: 'Cloud Sync on the Synology: this bucket, folder raw/' });
     new CfnOutput(this, 'SigningKeyPairId', { value: publicKey.publicKeyId });
   }
 }

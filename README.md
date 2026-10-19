@@ -1,4 +1,4 @@
-# Stills service
+# Stills Engine
 
 One home for our stills across Big Small TV, At Speed Productions and Serpentine Creative (and Happened, later).
 
@@ -13,6 +13,7 @@ This is a separate service with its own AWS account and deploys. The Production 
 | Done in phase 1 | Later |
 |---|---|
 | Browser upload (files and folders), JPEG, PNG, HEIC, TIFF | Desktop uploader and Lightroom re-export as versions (phase 2) |
+| RAWs to the office Synology via a RAW inbox; JPEGs from RAW previews; connection test and time estimate before uploading ([docs/RAW.md](docs/RAW.md)) | |
 | Processing: SHA-256 duplicates, perceptual hash, EXIF, IPTC, colour, size | Near-duplicate groups and culling (phase 2) |
 | Albums, library search, saved searches | Drive, OneDrive and Frame.io imports (phase 2) |
 | Recipes with the phase 1 controls, Auto, history, "back to this version" | Looks per album with batch apply, "match this one" (phase 2) |
@@ -48,4 +49,5 @@ npm run deploy      # needs credentials for the stills account; see docs/SETUP.m
 - [docs/API.md](docs/API.md): endpoints, shapes, webhooks, signed links
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): how it fits together, and the decisions made
 - [docs/RECIPES.md](docs/RECIPES.md): the adjustment maths
+- [docs/RAW.md](docs/RAW.md): RAWs, the Synology and the upload planner
 - [docs/HANDBACK.md](docs/HANDBACK.md): what the Production Engine thread needs

@@ -4,7 +4,7 @@ Nothing here has been run yet. These are the steps for the first deploy.
 
 ## 1. The AWS account
 
-Create a new member account in the same AWS Organization as `920373021810` (for example `stills-service`). Keep it separate from the engine's account. The engine's deploy user stays scoped to `proposal-engine-*`.
+Create a new member account in the same AWS Organization as `920373021810` (for example `stills-engine`). Keep it separate from the engine's account. The engine's deploy user stays scoped to `proposal-engine-*`.
 
 Then, with admin credentials for the **new** account:
 
@@ -38,18 +38,22 @@ npm run deploy        # builds the screens and the sharp layer, then cdk deploy 
 
 The first deploy makes the CloudFront signing key (in Secrets Manager, by a custom resource), the cookie key, buckets, table, queues, functions and the distribution. Note the outputs: `PublicBase`, `ApiBase`, `SigningKeyPairId`.
 
-To deploy from GitHub Actions instead, deploy `StillsServiceDeployAccess` once by hand, then set the repository variables `AWS_DEPLOY_ROLE_ARN` (its output) and `STILLS_ACCOUNT`. `.github/workflows/deploy.yml` uses OIDC, so no keys are stored.
+To deploy from GitHub Actions instead, deploy `StillsEngineDeployAccess` once by hand, then set the repository variables `AWS_DEPLOY_ROLE_ARN` (its output) and `STILLS_ACCOUNT`. `.github/workflows/deploy.yml` uses OIDC, so no keys are stored.
 
 ## 4. Apps
 
 ```
-npx tsx scripts/create-app.mts --app engine --webhook https://<engine>/api/stills-service/hook
+npx tsx scripts/create-app.mts --app engine --webhook https://<engine>/api/stills-engine/hook
 npx tsx scripts/create-app.mts --app happened --companies happened      # later
 ```
 
-The key goes to Secrets Manager `stills-service/apps/<app>`, and the webhook secret to `stills-service/webhook/<app>`. The script never prints them. Copy the engine's key into the engine's secret `proposal-engine/app` as `stillsServiceKey`.
+The key goes to Secrets Manager `stills-engine/apps/<app>`, and the webhook secret to `stills-engine/webhook/<app>`. The script never prints them. Copy the engine's key into the engine's secret `proposal-engine/app` as `stillsServiceKey`.
 
-## 5. Brands
+## 5. The Synology (RAWs)
+
+Follow [RAW.md](RAW.md): one IAM access key, typed straight into Cloud Sync on the Synology.
+
+## 6. Brands
 
 Copy colours, fonts and logos from the engine's `src/brands/<id>/brand.json` into `brands/<id>.json`. Put logos in `web/public/brand/<id>/` and set `"logo": "/brand/<id>/logo.svg"`. Until then, galleries show the company name as text.
 

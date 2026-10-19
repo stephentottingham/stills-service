@@ -10,6 +10,8 @@ export const config = {
   get table() { return env('TABLE_NAME'); },
   get originalsBucket() { return env('ORIGINALS_BUCKET'); },
   get renditionsBucket() { return env('RENDITIONS_BUCKET'); },
+  /** RAW inbox: raw/ is synced down to the Synology; speedtest/ holds connection tests. */
+  get rawBucket() { return env('RAW_BUCKET'); },
   /** Public base of the service, e.g. https://stills.bigsmall.tv (CloudFront). */
   get publicBase() { return env('PUBLIC_BASE').replace(/\/$/, ''); },
   get distributionId() { return env('DISTRIBUTION_ID', ''); },

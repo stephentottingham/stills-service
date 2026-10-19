@@ -1,6 +1,6 @@
 # Architecture
 
-Everything is in **eu-west-2 (London)**, in the stills service's own AWS account. CloudFront is global, but it only caches; the files and data live in London.
+Everything is in **eu-west-2 (London)**, in the Stills Engine's own AWS account. CloudFront is global, but it only caches; the files and data live in London.
 
 ```
                     ┌────────────── CloudFront (one distribution) ───────────────┐
@@ -19,6 +19,7 @@ Everything is in **eu-west-2 (London)**, in the stills service's own AWS account
 ## Storage
 
 - **Originals bucket**: private and versioned, never served. S3 Intelligent-Tiering (as are renditions), so pictures nobody opens get cheaper on their own. `o/<still>/original.<ext>`. HEIC files also get a full-size JPEG master at `m/<still>/master.jpg`, because the Lambda build of sharp cannot read HEIC (HEVC licensing). We decode HEIC with libheif in WebAssembly instead.
+- **RAW inbox**: `raw/…` waits for the office Synology's Cloud Sync to pull it down, then clears after 30 days; `speedtest/…` holds the uploader's connection tests for a day. See [RAW.md](RAW.md).
 - **Renditions bucket**: `r/<still>/<size>/v<version>.jpg`, made on demand; `z/<zip>/…` zips, deleted after 7 days.
 - **DynamoDB**, one table: see `services/src/lib/model.ts` for keys and indexes.
 

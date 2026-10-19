@@ -71,7 +71,7 @@ describe('the whole flow', () => {
       pk: `APPKEY#${hash}`,
       sk: 'META',
       app: 'engine',
-      webhookUrl: 'https://engine.example/api/stills-service/hook',
+      webhookUrl: 'https://engine.example/api/stills-engine/hook',
       gsi1pk: 'APP',
       gsi1sk: 'engine',
     });
@@ -94,7 +94,7 @@ describe('the whole flow', () => {
   });
 
   it('refuses files it cannot read yet', async () => {
-    const r = await call('POST', `/api/albums/${albumId}/uploads`, { files: [{ name: 'a.cr3', type: 'image/x-canon-cr3', size: 10 }] });
+    const r = await call('POST', `/api/albums/${albumId}/uploads`, { files: [{ name: 'layout.psd', type: 'image/vnd.adobe.photoshop', size: 10 }] });
     expect(r.status).toBe(400);
   });
 
@@ -136,6 +136,42 @@ describe('the whole flow', () => {
     expect(r.body.stills.map((s: any) => s.id)).toEqual([stillId]);
     const none = await call('GET', '/api/stills', undefined, { q: 'nothing-like-this' });
     expect(none.body.total).toBe(0);
+  });
+
+  it('sends RAWs to the inbox for the Synology and pairs them with their JPEG', async () => {
+    const r = await call('POST', `/api/albums/${albumId}/uploads`, {
+      files: [
+        { name: 'IMG_0001.CR3', type: 'application/octet-stream', size: 30_000_000 },
+        { name: 'IMG_0099.NEF', type: '', size: 25_000_000 },
+      ],
+    });
+    expect(r.status).toBe(200);
+    const [cr3, nef] = r.body.uploads;
+    expect(cr3.kind).toBe('raw');
+    expect(cr3.url).toContain('raw.s3.');
+    expect(cr3.path).toMatch(new RegExp(`^bigsmall/\\d{4}-\\d{2}-\\d{2}-shoot-day-1_${albumId}/IMG_0001\\.CR3$`));
+    expect(nef.kind).toBe('raw');
+    // No still is made for a RAW.
+    expect((await call('GET', '/api/stills', undefined, { album: albumId, status: 'any' })).body.total).toBe(2);
+
+    // S3 tells us the RAW arrived.
+    const res = await processor({
+      Records: [{ messageId: 'm', body: JSON.stringify({ Records: [{ s3: { bucket: { name: 'raw' }, object: { key: `raw/${cr3.path}`, size: 30_000_000 } } }] }) }],
+    } as any);
+    expect(res.batchItemFailures).toEqual([]);
+    const still = await call('GET', `/api/stills/${stillId}`);
+    expect(still.body.raw).toEqual({ filename: 'IMG_0001.CR3', path: cr3.path, bytes: 30_000_000 });
+
+    const files = await call('GET', `/api/albums/${albumId}/files`);
+    expect(files.body.raws.find((x: any) => x.filename === 'IMG_0001.CR3')).toMatchObject({ status: 'arrived', stillId });
+    expect(files.body.raws.find((x: any) => x.filename === 'IMG_0099.NEF').status).toBe('requested');
+    expect(files.body.stills.map((x: any) => x.filename)).toContain('IMG_0001.jpg');
+  });
+
+  it('hands out connection-test links', async () => {
+    const r = await call('POST', '/api/speedtest', { bytes: 2_000_000 });
+    expect(r.body.urls).toHaveLength(2);
+    expect(r.body.urls[0]).toContain('/speedtest/');
   });
 
   it('saves recipes as versions and refuses a stale save', async () => {

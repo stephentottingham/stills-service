@@ -1,12 +1,12 @@
 /**
  * Creates (or replaces) an app's API key, and optionally its webhook.
  *
- *   npx tsx scripts/create-app.mts --app engine --webhook https://<engine>/api/stills-service/hook
+ *   npx tsx scripts/create-app.mts --app engine --webhook https://<engine>/api/stills-engine/hook
  *   npx tsx scripts/create-app.mts --app happened --companies happened
  *
- * Run with credentials for the stills service's AWS account. The key and the
- * webhook signing secret go straight into Secrets Manager (stills-service/apps/<app>
- * and stills-service/webhook/<app>); this script never prints them. Copy the key
+ * Run with credentials for the Stills Engine's AWS account. The key and the
+ * webhook signing secret go straight into Secrets Manager (stills-engine/apps/<app>
+ * and stills-engine/webhook/<app>); this script never prints them. Copy the key
  * into the app's own secret from there (for the engine: proposal-engine/app,
  * field stillsServiceKey).
  */
@@ -28,7 +28,7 @@ const { values } = parseArgs({
     webhook: { type: 'string' },
     companies: { type: 'string' },
     events: { type: 'string' },
-    stack: { type: 'string', default: 'StillsService' },
+    stack: { type: 'string', default: 'StillsEngine' },
   },
 });
 if (!values.app || !/^[a-z][a-z0-9-]{1,30}$/.test(values.app)) {
@@ -70,7 +70,7 @@ const key = `ssk_${app}_${randomBytes(30).toString('base64url')}`;
 const hash = createHash('sha256').update(key).digest('hex');
 let webhookSecret: string | undefined;
 if (values.webhook) {
-  webhookSecret = `stills-service/webhook/${app}`;
+  webhookSecret = `stills-engine/webhook/${app}`;
   await putSecret(webhookSecret, randomBytes(32).toString('hex'), `Webhook signing secret for ${app}`);
 }
 await ddb.send(
@@ -91,9 +91,9 @@ await ddb.send(
     },
   }),
 );
-await putSecret(`stills-service/apps/${app}`, key, `API key for ${app} (stills service)`);
+await putSecret(`stills-engine/apps/${app}`, key, `API key for ${app} (Stills Engine)`);
 
 console.log(`App "${app}" is set up.`);
-console.log(`  API key:        Secrets Manager stills-service/apps/${app}`);
+console.log(`  API key:        Secrets Manager stills-engine/apps/${app}`);
 if (webhookSecret) console.log(`  Webhook secret: Secrets Manager ${webhookSecret}`);
 console.log('Any earlier key for this app no longer works (allow up to 5 minutes for cached sign-ins to expire).');

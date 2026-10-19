@@ -8,6 +8,7 @@ import { getStill, setStillFields, addToAlbum, saveRecipe, stillView } from './s
 import { heicToJpeg, isHeic, orientedSize, dHash, colourOf } from './images';
 import { makeRendition } from './renditions';
 import { emit } from './events';
+import { pairStillWithRaw } from './raw';
 
 /**
  * Processes one uploaded original: hash, duplicate check, EXIF and IPTC,
@@ -102,6 +103,7 @@ export async function processUpload(key: string): Promise<void> {
     await makeRendition(current, 't', current.version, source);
     await makeRendition(current, 'm', current.version, source);
 
+    await pairStillWithRaw(id, current.filename, current.albumIds);
     await emit('still.ready', await stillView(current), current.companies);
   } catch (e: any) {
     console.error('Processing failed', id, e);

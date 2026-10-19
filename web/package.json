@@ -6,7 +6,11 @@
   "description": "The library and editor screens (static, served from CloudFront under /app/).",
   "scripts": {
     "build": "node build.mjs",
-    "dev": "node build.mjs --watch"
+    "dev": "node build.mjs --watch",
+    "test": "vitest run"
   },
-  "dependencies": { "@stills/recipe": "*" }
+  "dependencies": {
+    "@stills/recipe": "*",
+    "exifr": "7.1.3"
+  }
 }
